@@ -1,0 +1,150 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Phaser - cargar tiles con el map editor9</title>
+	<meta name="description" content="Ejemplo como cargar tiles desde un fichero json para programar un juego de coches con Phaser">
+
+	<script src="phaser.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.16.2/phaser.js"></script>
+	<script>
+
+
+		var config = {
+		type: Phaser.AUTO,
+		width: 800,
+		height: 600,
+		scene: {
+			preload: preload,
+			create: create,
+			update: update,
+		},
+
+		physics: {
+        default: 'arcade',
+        arcade: {
+            debug: false,
+            //gravity: { y: 400 }
+        }
+
+	}
+};
+		var game = new Phaser.Game(config);
+
+
+function preload(){
+
+			this.load.image('gameTiles', 'img/tiles_spritesheet.png');
+			this.load.tilemapTiledJSON('level1', 'map.json');
+			this.load.image('car','img/car.png');
+			this.load.image('leftbtn', 'img/arrow-left.png');
+			this.load.image('rightbtn','img/arrow-right.png')
+			this.load.image('upbtn','img/up.png')
+}
+
+
+function create(){
+
+			this.map = this.add.tilemap('level1');	
+			var tileset = this.map.addTilesetImage('tiles_spritesheet','gameTiles');
+			this.backgroundLayer = this.map.createStaticLayer('backgroundLayer', tileset);
+
+			
+			var players = findObjectsByType('player', this.map, 'objectsLayer');
+			player = this.physics.add.sprite(players[0].x, players[0].y, 'car');
+			
+			cursors = this.input.keyboard.createCursorKeys();
+			juego = this;
+			arrows = controlesVisuales()
+
+			velocity = 0;
+			
+}
+
+function update (){
+
+			if ((cursors.up.isDown || player.parametros.up) && velocity <= 200) {
+				velocity+=25;
+			}else if (velocity >= 7){
+				velocity -= 7;
+			}
+
+			if (cursors.left.isDown || player.parametros.direccionHorizontal ==-1){
+				player.angle = player.angle - 10*(velocity/1000);
+			}else if (cursors.right.isDown || player.parametros.direccionHorizontal == 1){
+				player.angle = player.angle + 10*(velocity/1000);
+			}
+
+		player.body.velocity.y = velocity * Math.sin((player.angle-90)*0.01745);
+		player.body.velocity.x = velocity * Math.cos((player.angle-90)*0.01745);
+
+}
+
+
+//GLOBAL FUNCTIONS..........................................................................
+
+
+function findObjectsByType(type, tilemap, layer) {
+	
+		var result = [];
+		tilemap.objects.forEach(function(element) {
+			if (element.name == 'objectsLayer') {
+				element.objects.forEach(function(element2) {
+					if (element2.type == type) {
+						element2.y -= tilemap.tileHeight;
+						result.push(element2);
+					}
+				});
+			}
+		});
+		return result;
+}
+
+function controlesVisuales(){
+	
+	player.parametros = {};
+	player.parametros.direccionHorizontal = 0;
+
+	var leftbtn = juego.add.sprite(100, 400,'leftbtn').setInteractive();
+	var rightbtn = juego.add.sprite(200, 400,'rightbtn').setInteractive();
+	var upbtn = juego.add.sprite(400, 400,'upbtn').setInteractive();
+
+
+	leftbtn.fixedToCamera = true;
+	rightbtn.fixedToCamera = true;
+	upbtn.fixedToCamera = true;
+
+	rightbtn.on('pointerdown', function(){
+		player.parametros.direccionHorizontal = 1;
+	});
+
+	leftbtn.on('pointerdown', function(){
+		player.parametros.direccionHorizontal = -1;
+	});
+
+	upbtn.on('pointerdown', function(){
+		player.parametros.up = true;
+	});
+
+	rightbtn.on('pointerup', function(){
+		player.parametros.direccionHorizontal = 0;
+	});
+
+	leftbtn.on('pointerup', function(){
+		player.parametros.direccionHorizontal = 0;
+	});
+
+	upbtn.on('pointerup', function(){
+		player.parametros.up = false;
+	});
+
+}
+
+
+		</script>
+	</head>
+	<body>
+		<h1>Carga de los tiles de un decorado en Phaser</h1>
+	</body>
+	</html>

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Lamaranya</title>
+	<meta name="description" content="juego laberinto">
+	<link rel="stylesheet" type="text/css" href="game.css"/>
+	<script src="phaser.min.js"></script>
+	<script>
+
+
+		var sceneConfigA = {
+			key: 'level1',
+			preload: preload,
+			create: create,
+			update: update,
+		};
+
+		var sceneConfigB = {
+			key: 'gameOver',
+			preload: preloadB,
+			create: createB,
+		
+		};
+
+		var config = {
+			type: Phaser.AUTO,
+			width: 800,
+			height: 520,
+			parent: "myGame",
+			scene: [sceneConfigA,sceneConfigB],
+
+			physics: {
+				default: 'arcade',
+				arcade: {
+					debug: false,
+				}
+
+			}
+		};
+		var game = new Phaser.Game(config);
+
+		var score = 0;
+		var scoreText;
+		var player;
+		var spider;
+		var exitDoor;
+		var diamond;
+		var gameOver = false;
+		var goal = false;
+		var spotlight;
+		var contadorDiamantes = 0;
+		
+
+
+
+
+function preload(){
+
+	this.load.image('background','img/background.png')
+	this.load.image('gameTiles', 'img/tileset_sprite.png');
+	this.load.tilemapTiledJSON('level1', 'maps/tileset_walls.json');
+	
+	this.load.spritesheet('player','img/pnj.png',{frameWidth: 31, frameHeight: 32});
+	this.load.spritesheet('spider','img/spider.png',{frameWidth: 40, frameHeight: 35});
+	
+	this.load.image('diamond','img/diamond1.png')
+	this.load.image('diamond2','img/diamond2.png')
+	this.load.image('diamond3','img/diamond3.png')
+	this.load.image('abuelito','img/abuelito.png')
+	this.load.image('phaserdude','img/phaser-dude.png')
+	this.load.image('skeleton','img/skeleton.png')
+
+	this.load.image('mask', 'img/mask1.png');
+	this.load.image('salida','img/salida.png')
+
+	this.load.audio('abuelitoSound', ['sounds/abuelo.mp3']);
+	this.load.audio('abuelitaSound', ['sounds/abuela.mp3']);
+	this.load.audio('phaserSound', ['sounds/phaser.mp3']);
+	
+
+}
+
+
+function create(){
+	this.cameras.main.fadeIn(2500)
+
+	//PLATFORM
+	fondo = this.add.image(400,250,'background')
+	this.map = this.add.tilemap('level1');	
+	var tileset = this.map.addTilesetImage('tileset_sprite','gameTiles');
+	walls = this.map.createStaticLayer('walls', tileset,0,0);
+	
+
+	//OBJECTS
+	exitDoor = this.physics.add.sprite(798,340,'salida')
+	player = this.physics.add.sprite(40,40,'player');
+	diamond = this.physics.add.sprite(700,100,'diamond');
+	diamond2 = this.physics.add.sprite(520,220,'diamond2');
+	diamond3 = this.physics.add.sprite(280,240,'diamond3');
+
+	diamondA = this.physics.add.sprite(40,500,'diamond').setAlpha(0);
+	diamondA2 = this.physics.add.sprite(60,500,'diamond2').setAlpha(0);
+	diamondA3 = this.physics.add.sprite(80,500,'diamond3').setAlpha(0);
+
+	pnj1 = this.physics.add.sprite(220,178, 'abuelito')
+	pnj2 = this.physics.add.sprite(520,415, 'phaserdude')
+	pnj3 = this.physics.add.sprite(520,100, 'skeleton')
+
+	pnj1.body.immovable = true
+	pnj2.body.immovable = true
+	pnj3.body.immovable = true
+
+
+	//SOUNDS
+	abueloFX = this.sound.add('abuelitoSound')
+	abuelaFX = this.sound.add('abuelitaSound')
+	phaserFX = this.sound.add('phaserSound')
+	
+	
+	
+	//COLLISIONS
+	walls.setCollisionBetween(1, 50);
+	player.setCollideWorldBounds(true);
+	this.physics.add.collider(walls,player);
+
+	this.physics.add.collider(player, pnj1, abueloSound, null, this);
+	this.physics.add.collider(player, pnj2, phaserSound, null, this);
+	this.physics.add.collider(player, pnj3, abuelaSound, null, this);
+
+	this.physics.add.overlap(player, diamond,findDiamond,null, this);
+	this.physics.add.overlap(player, diamond2,findDiamond2,null, this);
+	this.physics.add.overlap(player, diamond3,findDiamond3,null, this);
+	
+	
+	//MOVEMENT
+	cursors = this.input.keyboard.createCursorKeys();
+
+	//ANIMATIONS
+	this.anims.create({
+	    key: 'down',
+	    frames: this.anims.generateFrameNumbers('player', { start: 0, end: 2 }),
+	    frameRate: 10,
+	    repeat: 0,
+	});
+
+	this.anims.create({
+	    key: 'left',
+	    frames: this.anims.generateFrameNumbers('player', { start: 3, end: 5 }),
+	    frameRate: 10,
+	    repeat: 0,
+	});
+
+	this.anims.create({
+	    key: 'right',
+	    frames: this.anims.generateFrameNumbers('player', { start: 6, end: 8 }),
+	    frameRate: 10,
+	    repeat: 0,
+	});
+
+	this.anims.create({
+	    key: 'up',
+	    frames: this.anims.generateFrameNumbers('player', { start: 9, end: 11 }),
+	    frameRate: 10,
+	    repeat: 0,
+	});
+
+	this.anims.create({
+	    key: 'spiderMove',
+	    frames: this.anims.generateFrameNumbers('spider', { start: 1, end: 3 }),
+	    frameRate: 10,
+	    repeat: -1,
+	});
+
+	//MASK
+	spotlight = this.make.sprite({
+	        x: 400,
+	        y: 300,
+	        key: 'mask',
+	        add: false
+	    });
+
+
+    fondo.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    walls.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    player.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    diamond.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    diamond2.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    diamond3.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    pnj1.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    pnj2.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    pnj3.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+    exitDoor.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);
+
+    
+
+   
+
+	//PATH
+	var path = new Phaser.Curves.Path(580, 280);
+	path.lineTo(760, 280);
+	path.lineTo(760, 40);
+	path.lineTo(340, 40);
+	path.lineTo(340, 280);
+	path.lineTo(400, 280);
+	path.lineTo(400, 220);
+	path.lineTo(400, 280);
+	path.lineTo(280, 280);
+	path.lineTo(280, 240);
+	path.lineTo(220, 240);
+	path.lineTo(220, 360);
+	path.lineTo(40, 360);
+	path.lineTo(40, 480);
+	path.lineTo(100, 480);
+	path.lineTo(100, 420);
+	path.lineTo(160, 420);
+	path.lineTo(160, 480);
+	path.lineTo(220, 480);
+	path.lineTo(220, 420);
+	path.lineTo(280, 420);
+	path.lineTo(280, 480);
+	path.lineTo(340, 480);
+	path.lineTo(340, 340);
+	path.lineTo(340, 480);
+	path.lineTo(400, 480);
+	path.lineTo(400, 400);
+	path.lineTo(460, 400);
+	path.lineTo(460, 480);
+	path.lineTo(580, 480);
+	path.lineTo(580, 340);
+	path.lineTo(640, 340);
+	path.lineTo(640, 420);
+	path.lineTo(640, 340);//return
+	path.lineTo(640, 420);
+	path.lineTo(640, 340);
+	path.lineTo(580, 340);
+	path.lineTo(580, 480);
+	path.lineTo(460, 480);
+	path.lineTo(460, 400);
+	path.lineTo(400, 400);
+	path.lineTo(400, 480);
+	path.lineTo(340, 480);
+	path.lineTo(340, 340);
+	path.lineTo(340, 480);
+	path.lineTo(280, 480);
+	path.lineTo(280, 280);
+	path.lineTo(380, 280);
+
+   
+    var graphics = this.add.graphics();
+
+    graphics.lineStyle(2, 0xffffff, 0);
+
+    path.draw(graphics);
+
+//SPIDER  
+spider = this.add.follower(path, 580, 280, 'spider');
+this.physics.world.enable(spider);
+/*spider.mask = new Phaser.Display.Masks.BitmapMask(this, spotlight);*/
+this.physics.add.overlap(player,spider,catchPlayer, null, this);
+
+winText = this.add.text(120, 200, '', { font: '36px AddLGBitmap09', fill: '#2AE5DA' });
+
+juego = this
+
+}
+
+function update(){
+
+	if(!gameOver){
+
+		if (cursors.left.isDown )
+		{
+		    player.setVelocityX(-120);
+
+		    player.anims.play('left', true);
+		}
+		else if (cursors.right.isDown)
+		{
+		    player.setVelocityX(120);
+
+		    player.anims.play('right', true);
+		}
+		
+		else if (cursors.up.isDown)
+		{
+		    player.setVelocityY(-120);
+
+		    player.anims.play('up', true);
+		}
+
+		else if (cursors.down.isDown)
+		{
+		    player.setVelocityY(120);
+
+		    player.anims.play('down', true);
+		}
+
+		else 
+		{
+			player.setVelocityX(0);
+			player.setVelocityY(0);
+		}
+	}else{
+		
+		player.setVelocityX(0);
+		player.setVelocityY(0);
+		this.physics.world.disable(spider)
+	}
+
+	//wincondition
+	if (player.x > 800){
+		winGame()
+
+	}
+
+	//maskfollow	
+    spotlight.x = player.x;
+    spotlight.y = player.y;
+
+}
+
+function preloadB () {
+
+	this.load.image('gameover','img/gameover.png')
+	this.load.image('restart','img/restart.png')
+	this.load.image('exit','img/exit.png')
+
+}
+
+function createB () {
+
+	efecto = this.cameras.main.fadeIn(4000)
+	
+
+	gameoverPic = this.add.image(400,220,'gameover')
+  	restartPic = this.add.image(400,300,'restart').setInteractive()
+  	exitPic = this.add.image(400,350,'exit').setInteractive()
+
+  	restartPic.on('pointerover', function (event) {
+
+        this.setTint(0x00ff00);
+
+    });
+
+    restartPic.on('pointerout', function (event) {
+
+        this.clearTint();
+
+    });
+
+  	restartPic.on('pointerup', function (pointer) {
+
+  		gameOverMenu.scene.launch('gameOver')
+  		playAgain ()
+
+    });
+
+    exitPic.on('pointerover', function (event) {
+
+        this.setTint(0x00ff00);
+
+    });
+
+    exitPic.on('pointerout', function (event) {
+
+        this.clearTint();
+
+    });
+
+
+	exitPic.on('pointerup', function (pointer) {
+
+	  
+
+	});
+
+	gameOverMenu = this
+
+}
+
+
+//Globals.......................................................
+
+function findDiamond (player, diamond)
+
+{
+  diamond.disableBody(true, true);
+
+  diamondA.setAlpha(1)
+
+  contadorDiamantes++ 
+
+  if (contadorDiamantes==3){
+  	goal = true;
+  	spider.anims.play('spiderMove', true);
+  	spiderUp()
+  	exitDoor.disableBody(true,true)
+  	player.setCollideWorldBounds(false, true, true, true);
+  }
+
+}
+
+function findDiamond2 (player, diamond)
+
+{
+  diamond2.disableBody(true, true);
+  contadorDiamantes++ 
+  diamondA2.setAlpha(1)
+
+  if (contadorDiamantes==3){
+  	goal = true;
+  	spider.anims.play('spiderMove', true);
+  	spiderUp()
+  	exitDoor.disableBody(true,true)
+  	player.setCollideWorldBounds(false, true, true, true);
+  }
+
+}
+
+function findDiamond3 (player, diamond)
+
+{
+  diamond3.disableBody(true, true);
+  contadorDiamantes++ 
+  diamondA3.setAlpha(1)
+
+  if (contadorDiamantes==3){
+  	goal = true;
+  	spider.anims.play('spiderMove', true);
+  	spiderUp()
+  	exitDoor.disableBody(true,true)
+  	player.setCollideWorldBounds(false, true, true, true);
+  }
+
+}
+
+ function spiderUp(){
+
+    	spider.startFollow({
+        duration: 41000,
+        yoyo: true,
+        repeat: -1,
+        rotateToPath: false,
+        rotationOffset: 90
+    });
+
+}
+
+function catchPlayer (player, spider)
+
+{
+	
+	gameOver = true;
+	player.setTint(0xff0000);
+	spider.stopFollow();
+
+
+	//FADEIN EFFECT TO MASK
+	this.tweens.add({
+        targets: spotlight,
+        alpha: 0,
+        duration: 3000,
+        ease: 'Sine.easeInOut',
+        loop: 0,
+        yoyo: false
+    });
+
+  
+  timedEvent = this.time.delayedCall(2000, gameOverWindow, [], this);
+
+}
+
+
+function gameOverWindow (){
+
+  		juego.scene.switch('gameOver');	
+  		
+}
+
+function playAgain (){
+
+		gameOver = false;
+		
+        gameOverMenu.scene.switch('level1');
+		
+		contadorDiamantes = 0
+
+        juego.scene.restart('level1');
+}
+
+function winGame (player,exitDoor){
+
+	if(goal==true){
+		
+		gameOver = true;
+		spider.stopFollow();
+	
+		winText.setText('LEVEL COMPLETED')
+
+	}
+}
+
+function abueloSound (){
+
+	abueloFX.play({
+		volume: 0.2
+	})
+}
+
+function abuelaSound (){
+
+	abuelaFX.play()
+}
+
+function phaserSound (){
+
+	phaserFX.play()
+}
+
+
+</script>
+</head>
+<body>
+	<div class="container">
+		<div class="game">
+			<div id="myGame"></div>
+			<div class="ayuda"><b>Objetivo:</b>  Reunir los tres diamantes y salir del laberinto.</div>
+		</div>
+	
+	</div>
+</body>
+</html>
